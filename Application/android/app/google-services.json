@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "906854831622",
+    "project_id": "roozgar-vendor",
+    "storage_bucket": "roozgar-vendor.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:906854831622:android:6c8cd5409df9017eaf1587",
+        "android_client_info": {
+          "package_name": "com.client.roozgar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "906854831622-9hejvi3c479civlnfv6ehn050epr1nlv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzuG2sxtcpeDKeNN0iTIv2LlrNEWqzIUA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "906854831622-9hejvi3c479civlnfv6ehn050epr1nlv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:906854831622:android:209ef50e29e80d3caf1587",
+        "android_client_info": {
+          "package_name": "com.omarfarooqkhan.snack3392c95bd5fe40f888253f5d89bde45d"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "906854831622-9hejvi3c479civlnfv6ehn050epr1nlv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzuG2sxtcpeDKeNN0iTIv2LlrNEWqzIUA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "906854831622-9hejvi3c479civlnfv6ehn050epr1nlv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
