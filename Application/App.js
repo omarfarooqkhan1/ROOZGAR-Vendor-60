@@ -20,39 +20,38 @@ import AddService from "./screens/Services/AddService";
 import { createStore } from "redux";
 import { Provider } from "react-redux";
 import { reducer } from "./reducers/reducer";
-// import messaging from "@react-native-firebase/messaging";
+import messaging from "@react-native-firebase/messaging";
 
 const store = createStore(reducer);
 const Stack = createStackNavigator();
 
 const App = () => {
-  // React.useEffect(() => {
-  //   messaging()
-  //     .getInitialNotification()
-  //     .then((remoteMessage) => {
-  //       if (remoteMessage) {
-  //         fetch(`${baseURL}/respondToOrder`, {
-  //           method: "POST",
-  //           headers: {
-  //             "Content-Type": "application/json",
-  //           },
-  //           body: JSON.stringify({
-  //             clientToken: remoteMessage.data.clientToken,
-  //           }),
-  //         })
-  //           .then((res) => res.json())
-  //           .then((data) => {});
-  //       }
-  //     });
-  // }, []);
+  React.useEffect(() => {
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage) {
+          fetch(`${baseURL}/respondToOrder`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              clientToken: remoteMessage.data.clientToken,
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {});
+        }
+      });
+  }, []);
 
   return (
     <Provider store={store}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="TabNavigation" component={TabNavigation} />
-          <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Loading" component={Loading} />
+          <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="SplashScreen" component={SplashScreen} />
           <Stack.Screen name="SignUp" component={SignUp} />
           <Stack.Screen name="OTP" component={OTP} />
@@ -72,6 +71,7 @@ const App = () => {
             name="TrackClientLocation"
             component={TrackClientLocation}
           />
+          <Stack.Screen name="TabNavigation" component={TabNavigation} />
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>

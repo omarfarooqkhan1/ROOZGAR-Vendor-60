@@ -76,7 +76,7 @@ const Map = () => {
       .collection("vendorLocations")
       .add({
         vendorId: vendor._id,
-        vendorLocation: new firestore.GeoPoint(superLat, superLong),
+        vendorLocation: new firestore.GeoPoint(33.6844, 73.0479),
         vendorCategory: vendor.category._id,
         vendorToken: vendorToken,
       })
