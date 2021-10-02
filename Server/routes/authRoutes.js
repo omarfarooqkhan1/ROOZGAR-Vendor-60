@@ -6,6 +6,10 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+const twilioAccountSid = "AC496fa46613142f07204c98e76f8c6168";
+const tiwiloAuthToken = "4881579e4f30fd7b0eca5d6eba22c60c";
+const twilioClient = require("twilio")(twilioAccountSid, tiwiloAuthToken);
+
 const express = require("express");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
@@ -13,13 +17,15 @@ const { jwtKey } = require("../keys");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
 const OngoingOrder = mongoose.model("OngoingOrder");
+const AcceptedOrder = mongoose.model("AcceptedOrder");
+const CancelledOrder = mongoose.model("CancelledOrder");
 const Vendor = mongoose.model("Vendor");
+const Client = mongoose.model("Client");
 const Service = mongoose.model("Service");
 const Category = mongoose.model("Category");
 const SubCategory = mongoose.model("SubCategory");
 const UnVerifiedVendor = mongoose.model("unverifiedvendors");
 const BlockedVendor = mongoose.model("blockedvendors");
-const BlockedService = mongoose.model("blockedservice");
 
 router.post("/signup", async (req, res) => {
   try {
@@ -72,6 +78,10 @@ router.get("/checkAlreadyRegistered/:phone", async (req, res) => {
       return res.send({
         error: "This mobile no. has been already registered!",
       });
+    } else {
+      return res.send({
+        success: "This mobile no. doesn't exist!",
+      });
     }
   } catch (err) {
     return res.send({ error: err.message });
@@ -83,7 +93,7 @@ router.post("/login", async (req, res) => {
   if (!phone || !password) {
     return res.send({ error: "Must provide both email and password!" });
   }
-  const vendor = await Vendor.findOne({ phone }).populate("category");
+  const vendor = await Vendor.findOne({ phone }).populate("category service");
   if (!vendor) {
     return res.send({
       error: "Sorry, couldn't find any account with this mobile no.!",
@@ -144,6 +154,35 @@ router.put("/changePassword/:id", async (req, res) => {
   }
 });
 
+router.put("/resetPassword/:phone", async (req, res) => {
+  const { newPassword, confirmNewPassword } = req.body;
+  var vendor = await Vendor.findOne({ phone: req.params.phone });
+  if (!vendor) {
+    return res.send({ error: "Sorry, no account found with this Mobile No.!" });
+  }
+  try {
+    if (newPassword.localeCompare(confirmNewPassword) === 0) {
+      vendor = await Vendor.findOneAndUpdate(
+        { _id: vendor._id },
+        {
+          passwordHash: await bcrypt.hashSync(newPassword, 10),
+        },
+        {
+          new: true,
+        }
+      );
+      await vendor.save();
+      return res.send({
+        success: "Password has been reset!",
+      });
+    } else {
+      return res.send({ error: "New passwords don't match!" });
+    }
+  } catch (err) {
+    return res.send({ error: err.message });
+  }
+});
+
 router.put("/editVendorDetails/:id", async (req, res) => {
   const { firstName, lastName, image, phone } = req.body;
   try {
@@ -190,6 +229,7 @@ router.post("/addService", async (req, res) => {
       description: description,
     });
     await service.save();
+    vendor.subCategories.push(subCategory._id);
     vendor.service.push(service._id);
     await vendor.save();
     return res.send({ service: service });
@@ -240,6 +280,54 @@ router.get("/getServices/:_id", async (req, res) => {
   }
 });
 
+router.put("/goOnline/:_id", async (req, res) => {
+  const { _id } = req.params;
+  try {
+    const vendor = await Vendor.findById(_id);
+    const vendorId = vendor._id;
+    const services = await Service.updateMany(
+      { vendorId },
+      { $set: { online: true } }
+    );
+    // const blockedServices = await BlockedService.find({ vendorName });
+    // var availableServices = [];
+    // for (var i = 0; i < services.length; i++) {
+    //   for (var j = 0; j < blockedServices.length; j++) {
+    //     if (services[i].title != blockedServices[j].title)
+    //       availableServices.push(services[i]);
+    //   }
+    // }
+    console.log(services);
+    res.send({ services: services });
+  } catch (err) {
+    return res.send(err.message);
+  }
+});
+
+router.put("/goOffline/:_id", async (req, res) => {
+  const { _id } = req.params;
+  try {
+    const vendor = await Vendor.findById(_id);
+    const vendorId = vendor._id;
+    const services = await Service.updateMany(
+      { vendorId },
+      { $set: { online: false } }
+    );
+    // const blockedServices = await BlockedService.find({ vendorName });
+    // var availableServices = [];
+    // for (var i = 0; i < services.length; i++) {
+    //   for (var j = 0; j < blockedServices.length; j++) {
+    //     if (services[i].title != blockedServices[j].title)
+    //       availableServices.push(services[i]);
+    //   }
+    // }
+    console.log(services);
+    res.send({ services: services });
+  } catch (err) {
+    return res.send(err.message);
+  }
+});
+
 router.get("/getCategories", async (req, res) => {
   try {
     const categories = await Category.find();
@@ -261,8 +349,22 @@ router.get("/getSubCategories/:category", async (req, res) => {
 
 router.get("/getService/:id", async (req, res) => {
   try {
-    const serv = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     res.send({ service: service });
+  } catch (err) {
+    return res.send(err.message);
+  }
+});
+
+router.get("/getClient/:id", async (req, res) => {
+  console.log("client Id: ", req.params.id);
+  try {
+    const client = await Client.findById(req.params.id);
+    res.send({
+      clientUserName: client.userName,
+      clientImage: client.image,
+      clientPhone: client.phone,
+    });
   } catch (err) {
     return res.send(err.message);
   }
@@ -332,12 +434,20 @@ router.delete("/myServices/:id", async (req, res) => {
   }
 });
 
-router.post("/respondToOrder", (req, res) => {
+router.post("/acceptOrder", async (req, res) => {
   console.log(req.body);
   const message = {
     notification: {
       title: "Order Accepted",
       body: "I have accepted your order",
+    },
+    data: {
+      vendorToken: req.body.vendorToken,
+      clientToken: req.body.clientToken,
+      vendorId: req.body.vendorId,
+      vendorImage: req.body.vendorImage,
+      orderId: req.body.orderId,
+      accepted: "accepted",
     },
     token: req.body.clientToken,
   };
@@ -345,10 +455,147 @@ router.post("/respondToOrder", (req, res) => {
     .messaging()
     .send(message)
     .then((res) => {
-      console.log(res);
+      console.log("nOTIFICATION SENT!");
     })
     .catch((err) => {
       console.log(err);
+    });
+  const doc = await OngoingOrder.findById(req.body.orderId);
+  const acceptedOrder = new AcceptedOrder({
+    vendorId: doc.vendorId,
+    clientId: doc.clientId,
+    vendorName: doc.vendorName,
+    image: doc.image,
+    serviceTitle: doc.serviceTitle,
+    price: doc.price,
+    completionTime: doc.completionTime,
+  });
+  if (doc.serviceId) {
+    acceptedOrder.serviceId = doc.serviceId;
+  }
+  await acceptedOrder.save();
+  res.send({ acceptedOrderId: acceptedOrder._id });
+});
+
+router.post("/cancelOrder", async (req, res) => {
+  console.log(req.body);
+  const message = {
+    notification: {
+      title: "Order Cancelled",
+      body: "I have cancelled your order",
+    },
+    data: {
+      vendorToken: req.body.vendorToken,
+      clientToken: req.body.clientToken,
+      vendorId: req.body.vendorId,
+      vendorImage: req.body.vendorImage,
+      orderId: req.body.orderId,
+      accepted: "rejected",
+    },
+    token: req.body.clientToken,
+  };
+  admin
+    .messaging()
+    .send(message)
+    .then((res) => {
+      console.log("nOTIFICATION SENT!");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  await OngoingOrder.findByIdAndDelete(
+    req.body.orderId,
+    async function (err, doc) {
+      if (err) {
+        console.log(err);
+      }
+      const cancelledOrder = new CancelledOrder({
+        vendorId: doc.vendorId,
+        clientId: doc.clientId,
+        vendorName: doc.vendorName,
+        image: doc.image,
+        serviceTitle: doc.serviceTitle,
+        price: doc.price,
+        completionTime: doc.completionTime,
+      });
+      if (doc.serviceId) {
+        cancelledOrder.serviceId = doc.serviceId;
+      }
+      await cancelledOrder.save();
+    }
+  );
+});
+
+router.post("/completeOrder", async (req, res) => {
+  console.log(req.body);
+  const message = {
+    notification: {
+      title: "Order Completed",
+      body: "Your order has been completed",
+    },
+    data: {
+      vendorToken: req.body.vendorToken,
+      clientToken: req.body.clientToken,
+      vendorId: req.body.vendorId,
+      vendorImage: req.body.vendorImage,
+      orderId: req.body.acceptedOrderId,
+      accepted: "completed",
+    },
+    token: req.body.clientToken,
+  };
+  admin
+    .messaging()
+    .send(message)
+    .then((res) => {
+      console.log("nOTIFICATION SENT!");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  await OngoingOrder.findByIdAndDelete(
+    req.body.orderId,
+    async function (err, doc) {
+      if (err) {
+        return console.log(err);
+      }
+      console.log(doc);
+    }
+  );
+});
+
+router.post("/arrivedAtLocation", async (req, res) => {
+  console.log(req.body);
+  const message = {
+    notification: {
+      title: "Vendor has arrived",
+      body: "I'm at your place",
+    },
+    data: {
+      accepted: "arrived",
+    },
+    token: req.body.clientToken,
+  };
+  admin
+    .messaging()
+    .send(message)
+    .then((res) => {
+      console.log("nOTIFICATION SENT!");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+});
+
+router.post("/sendOTP", async (req, res) => {
+  const OTP = Math.floor(1000 + Math.random() * 9000);
+  twilioClient.messages
+    .create({
+      body: `Welcome to ROOZGAR Vendor. Your SMS verification code is: ${OTP}`,
+      from: "+18647127254",
+      to: `+92${req.body.phoneNumber}`,
+    })
+    .then((message) => {
+      res.send({ OTP: OTP, message: message });
     });
 });
 

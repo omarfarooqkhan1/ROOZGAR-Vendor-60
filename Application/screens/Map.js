@@ -6,6 +6,7 @@ import {
   Modal,
   StyleSheet,
   PermissionsAndroid,
+  Alert,
 } from "react-native";
 import { Avatar } from "react-native-elements";
 import Colors from "../constants/Colors";
@@ -22,14 +23,17 @@ import Geolocation from "@react-native-community/geolocation";
 import { useSelector } from "react-redux";
 import firestore from "@react-native-firebase/firestore";
 import messaging from "@react-native-firebase/messaging";
+import baseURL from "../constants/baseURL";
 
 const Map = () => {
   const vendor = useSelector((state) => state.newVendor);
+  const [isLoading, setIsLoading] = React.useState(false);
   const vendorName = vendor.firstName + " " + vendor.lastName;
   const [myProfileModal, setMyProfileModal] = React.useState(false);
-  const [superLat, setSuperLat] = React.useState(55.9754);
-  const [superLong, setSuperLong] = React.useState(21.4735);
+  const [superLat, setSuperLat] = React.useState(33.6844);
+  const [superLong, setSuperLong] = React.useState(73.0479);
   const [vendorToken, setVendorToken] = React.useState("");
+  const vendorServices = [];
 
   React.useEffect(() => {
     const requestLocationPermission = async () => {
@@ -54,7 +58,7 @@ const Map = () => {
       .getToken()
       .then((token) => {
         setVendorToken(token);
-        console.log(token);
+        console.log(vendorToken);
       });
   }, []);
 
@@ -64,6 +68,27 @@ const Map = () => {
         setSuperLat(data.coords.latitude);
         setSuperLong(data.coords.longitude);
         console.log(data.coords);
+        for (i = 0; i < vendor.service.length; i++) {
+          vendorServices.push(vendor.service[i].subCategory);
+        }
+        firestore()
+          .collection("vendorLocations")
+          .doc(vendor._id)
+          .set({
+            vendorId: vendor._id,
+            vendorImage: vendor.image,
+            vendorLocation: new firestore.GeoPoint(
+              data.coords.latitude,
+              data.coords.longitude
+            ),
+            vendorCategory: vendor.category._id,
+            vendorToken: vendorToken,
+            vendorSubCategories: vendorServices,
+            // vendorCity: vendor.city,
+          })
+          .then(() => {
+            console.log("Location added successfully!");
+          });
       },
       console.log,
       {
@@ -72,29 +97,34 @@ const Map = () => {
         maximumAge: 3600000,
       }
     );
-    firestore()
-      .collection("vendorLocations")
-      .add({
-        vendorId: vendor._id,
-        vendorLocation: new firestore.GeoPoint(33.6844, 73.0479),
-        vendorCategory: vendor.category._id,
-        vendorToken: vendorToken,
+    fetch(`${baseURL}/goOnline/${vendor._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsLoading(false);
+        console.log(data);
       })
-      .then(() => {
-        console.log("Location added!");
+      .catch((error) => {
+        console.log(error);
+        Alert.alert(
+          "Error",
+          "Looks like you aren't connected to the internet!"
+        );
+        setIsLoading(false);
       });
-    // firestore()
-    //   .collection("clientLocations")
-    //   .onSnapshot((querySnapshot) => {
-    //     querySnapshot.forEach((doc) => {
-    //       console.log(doc.data());
-    //       //list.push(doc.data());
-    //     });
-    //   })
-    //   .then(() => {
-    //     console.log("Location got!");
-    //   });
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -284,6 +314,12 @@ const Map = () => {
 export default Map;
 
 const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.secondary,
+  },
   mapStyle: {
     width: "100%",
     height: "100%",

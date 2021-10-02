@@ -15,37 +15,26 @@ import CNICBack from "./screens/CNICBack";
 import Receipt from "./screens/Receipt";
 import WelcomeVendor from "./screens/WelcomeVendor";
 import SetPassword from "./screens/SetPassword";
+import ForgetPassword from "./screens/ForgetPassword";
+import ResetPassword from "./screens/ResetPassword";
 import SelectSubCategory from "./screens/SelectSubCategory";
 import AddService from "./screens/Services/AddService";
 import { createStore } from "redux";
 import { Provider } from "react-redux";
 import { reducer } from "./reducers/reducer";
-import messaging from "@react-native-firebase/messaging";
-
 const store = createStore(reducer);
 const Stack = createStackNavigator();
+import messaging from "@react-native-firebase/messaging";
+import CurrentAppointment from "./screens/CurrentAppointment";
+import AcceptOrder from "./screens/AcceptOrder";
+import Order from "./screens/Order";
+
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log("Message handled in the background!", remoteMessage);
+});
 
 const App = () => {
-  React.useEffect(() => {
-    messaging()
-      .getInitialNotification()
-      .then((remoteMessage) => {
-        if (remoteMessage) {
-          fetch(`${baseURL}/respondToOrder`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              clientToken: remoteMessage.data.clientToken,
-            }),
-          })
-            .then((res) => res.json())
-            .then((data) => {});
-        }
-      });
-  }, []);
-
+  console.disableYellowBox = true;
   return (
     <Provider store={store}>
       <NavigationContainer>
@@ -56,6 +45,8 @@ const App = () => {
           <Stack.Screen name="SignUp" component={SignUp} />
           <Stack.Screen name="OTP" component={OTP} />
           <Stack.Screen name="SetPassword" component={SetPassword} />
+          <Stack.Screen name="ForgetPassword" component={ForgetPassword} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} />
           <Stack.Screen name="SelectCategory" component={SelectCategory} />
           <Stack.Screen name="ProfilePicture" component={ProfilePicture} />
           <Stack.Screen name="CNICFront" component={CNICFront} />
@@ -72,6 +63,12 @@ const App = () => {
             component={TrackClientLocation}
           />
           <Stack.Screen name="TabNavigation" component={TabNavigation} />
+          <Stack.Screen
+            name="CurrentAppointment"
+            component={CurrentAppointment}
+          />
+          <Stack.Screen name="Order" component={Order} />
+          <Stack.Screen name="AcceptOrder" component={AcceptOrder} />
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>

@@ -83,6 +83,7 @@ function ProfileTab() {
 function TabNavigation() {
   var vendor = null;
   const dispatch = useDispatch();
+
   const loadVendorData = async () => {
     try {
       vendor = await AsyncStorage.getItem("vendor");

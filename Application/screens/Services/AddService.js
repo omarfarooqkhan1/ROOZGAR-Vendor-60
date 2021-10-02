@@ -30,6 +30,9 @@ const AddService = ({ navigation, route }) => {
   const dispatch = useDispatch();
 
   const addNewService = async () => {
+    if (!title || !description) {
+      return Alert.alert("Error", "Please enter both fields!");
+    }
     setIsLoading(true);
     fetch(`${baseURL}/addService/`, {
       method: "POST",

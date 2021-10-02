@@ -59,7 +59,6 @@ function MyProfileDetails({ navigation }) {
       return Alert.alert("Error", "Please enter your mobile no.!");
     }
     setIsLoading(true);
-    handleImageUpload(imageData);
     fetch(`${baseURL}/editVendorDetails/${vendor._id}`, {
       method: "PUT",
       headers: {
@@ -106,7 +105,7 @@ function MyProfileDetails({ navigation }) {
         };
         setImage(data.uri);
         setModalVisible(!modalVisible);
-        setImageData(newfile);
+        handleImageUpload(newfile);
       }
     } else {
       Alert.alert("Error", "You need to enable permission for Gallery Access!");
@@ -130,7 +129,7 @@ function MyProfileDetails({ navigation }) {
         };
         setImage(data.uri);
         setModalVisible(!modalVisible);
-        setImageData(newfile);
+        handleImageUpload(newfile);
       }
     } else {
       Alert.alert("Error", "You need to enable permission for Camera Access!");
@@ -223,7 +222,7 @@ function MyProfileDetails({ navigation }) {
                     paddingLeft: 6,
                   }}
                 >
-                  Lahore
+                  {vendor.city}
                 </Text>
               </View>
             </View>

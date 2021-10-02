@@ -86,7 +86,14 @@ const vendorSchema = new mongoose.Schema({
   service: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "service",
+      ref: "Service",
+      default: [],
+    },
+  ],
+  subCategories: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubCategory",
       default: [],
     },
   ],

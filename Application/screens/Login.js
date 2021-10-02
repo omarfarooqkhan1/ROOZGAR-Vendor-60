@@ -15,9 +15,12 @@ import {
   Alert,
   StyleSheet,
   StatusBar,
+  PermissionsAndroid,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Geocoder from "react-native-geocoder";
+import Geolocation from "@react-native-community/geolocation";
 
 const Login = ({ navigation }) => {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -27,7 +30,7 @@ const Login = ({ navigation }) => {
   const vendor = useSelector((state) => state.newVendor);
 
   React.useEffect(() => {
-    if (vendor) {
+    if (vendor.password) {
       signUp();
     }
   }, []);
@@ -54,13 +57,11 @@ const Login = ({ navigation }) => {
       .then((res) => res.json())
       .then(async (data) => {
         if (data.vendor) {
-          await AsyncStorage.setItem("token", data.token);
-          await AsyncStorage.setItem("vendor", JSON.stringify(data.vendor));
-          dispatch({ type: "ADD_NEW_VENDOR", payload: data.vendor });
           Alert.alert(
             "Success",
             "Registration has been completed. Once your documents are verified, we will notify you via SMS, and you will be able to offer your services."
           );
+          console.log(data.vendor);
         }
         setIsLoading(false);
       })
@@ -81,6 +82,7 @@ const Login = ({ navigation }) => {
     if (phone.length < 11)
       return Alert.alert("Error", "Must enter a valid 11-digit mobile no.!");
     setIsLoading(true);
+    console.log(baseURL);
     fetch(`${baseURL}/login`, {
       method: "POST",
       headers: {
@@ -94,8 +96,40 @@ const Login = ({ navigation }) => {
       .then((res) => res.json())
       .then(async (data) => {
         if (data.vendor) {
+          let vendor = data.vendor;
+          const backgroundgranted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+            {
+              title: "Background Location Permission",
+              message:
+                "We need access to your location " +
+                "so you can get live quality updates.",
+              buttonNeutral: "Ask Me Later",
+              buttonNegative: "Cancel",
+              buttonPositive: "OK",
+            }
+          );
+          if (backgroundgranted === PermissionsAndroid.RESULTS.GRANTED) {
+            Geolocation.getCurrentPosition(
+              (data) => {
+                let vendorCoords = {
+                  lat: parseFloat(data.coords.latitude),
+                  lng: parseFloat(data.coords.longitude),
+                };
+                Geocoder.geocodePosition(vendorCoords).then((res) => {
+                  vendor.city = res[0].subAdminArea;
+                });
+              },
+              console.log,
+              {
+                enableHighAccuracy: false,
+                timeout: 2000,
+                maximumAge: 3600000,
+              }
+            );
+          }
           await AsyncStorage.setItem("token", data.token);
-          await AsyncStorage.setItem("vendor", JSON.stringify(data.vendor));
+          await AsyncStorage.setItem("vendor", JSON.stringify(vendor));
           navigation.replace("TabNavigation");
         } else if (data.error) {
           Alert.alert("Error", data.error);
@@ -170,6 +204,26 @@ const Login = ({ navigation }) => {
             />
           </Item>
         </Form>
+        <View
+          style={{
+            width: wp("95%"),
+            justifyContent: "flex-end",
+            flexDirection: "row",
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ForgetPassword")}
+          >
+            <Text
+              style={{
+                fontWeight: "bold",
+                color: Colors.primary,
+              }}
+            >
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
+        </View>
         <Button
           rounded
           success

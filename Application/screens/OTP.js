@@ -1,6 +1,6 @@
 import React from "react";
 import { Title, Header, Text, View, Button, Body, H1 } from "native-base";
-import { TouchableOpacity, StatusBar } from "react-native";
+import { TouchableOpacity, StatusBar, Alert } from "react-native";
 import SMSVerifyCode from "react-native-sms-verifycode";
 import Colors from "../constants/Colors";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -9,9 +9,53 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import { useSelector } from "react-redux";
+import baseURL from "../constants/baseURL";
 
-const OTP = ({ navigation }) => {
+const OTP = ({ navigation, route }) => {
   const { phone } = useSelector((state) => state.newVendor);
+  const [generatedOTP, setGeneratedOTP] = React.useState(0);
+  const [enteredOTP, setEnteredOTP] = React.useState();
+  const navigateTo = route.params.navigateTo;
+
+  React.useEffect(() => {
+    generateOTP();
+  }, []);
+
+  const generateOTP = () => {
+    fetch(`${baseURL}/sendOTP/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phoneNumber: phone.substring(1),
+        otp: generatedOTP,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setGeneratedOTP(data.OTP);
+        console.log(data.message);
+      });
+  };
+
+  const verifyOTP = () => {
+    if (generatedOTP === parseInt(enteredOTP)) {
+      if (navigateTo) {
+        navigation.navigate(navigateTo);
+      } else {
+        navigation.navigate("SetPassword");
+      }
+    } else {
+      Alert.alert("Sorry", "The SMS code you entered was invalid!");
+    }
+  };
+
+  const resendOTP = () => {
+    generateOTP();
+    Alert.alert("Success", `SMS code was resent to +92${phone.substring(1)}`);
+  };
+
   return (
     <>
       <StatusBar backgroundColor={Colors.statusbar} />
@@ -46,19 +90,20 @@ const OTP = ({ navigation }) => {
             verifyCodeLength={4}
             containerBackgroundColor={Colors.secondary}
             focusedCodeViewBorderColor="green"
+            onInputChangeText={setEnteredOTP}
           />
         </View>
         <Button
           rounded
           success
-          onPress={() => navigation.navigate("SetPassword")}
+          onPress={verifyOTP}
           style={{ alignSelf: "center", marginVertical: hp("2%") }}
         >
           <Text style={{ fontSize: RFValue(15, 580) }}>VERIFY!</Text>
         </Button>
         <View style={{ alignSelf: "center", flexDirection: "row" }}>
           <Text>Didn't get code? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={resendOTP}>
             <Text style={{ fontWeight: "bold", color: Colors.primary }}>
               RESEND
             </Text>

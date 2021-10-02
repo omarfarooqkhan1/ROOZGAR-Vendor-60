@@ -74,7 +74,9 @@ const SignUp = ({ navigation }) => {
       cnic: cnic,
     };
     dispatch({ type: "ADD_NEW_VENDOR", payload: vendor });
-    navigation.navigate("OTP");
+    navigation.navigate("OTP", {
+      navigateTo: "",
+    });
   };
 
   if (isLoading) {

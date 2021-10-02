@@ -13,9 +13,10 @@ require("./models/UnVerifiedVendors");
 require("./models/BlockedVendors");
 require("./models/BlockedService");
 require("./models/OngoingOrder");
+require("./models/CancelledOrder");
+require("./models/AcceptedOrder");
 
 const authRoutes = require("./routes/authRoutes");
-const requireToken = require("./middleware/requireToken");
 
 app.use(bodyParser.json());
 app.use(authRoutes);

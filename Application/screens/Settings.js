@@ -32,6 +32,7 @@ import {
   StatusBar,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -41,25 +42,61 @@ import {
 } from "react-native-responsive-screen";
 import { useSelector, useDispatch } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import firestore from "@react-native-firebase/firestore";
+import baseURL from "../constants/baseURL";
 
 function Settings({ navigation }) {
+  const [isLoading, setIsLoading] = React.useState(false);
   const dispatch = useDispatch();
   var vendor = useSelector((state) => state.newVendor);
   const vendorName = vendor.firstName + " " + vendor.lastName;
 
   const logout = async () => {
     try {
+      setIsLoading(true);
       await AsyncStorage.getAllKeys()
         .then((keys) => AsyncStorage.multiRemove(keys))
         .then(() => {
-          vendor = {};
+          vendor.password = "";
           dispatch({ type: "ADD_NEW_VENDOR", payload: vendor });
+          fetch(`${baseURL}/goOffline/${vendor._id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              firestore()
+                .collection("vendorLocations")
+                .doc(vendor._id)
+                .delete()
+                .then(() => {
+                  console.log(data);
+                });
+            })
+            .catch((error) => {
+              console.log(error);
+              Alert.alert(
+                "Error",
+                "Looks like you aren't connected to the internet!"
+              );
+              setIsLoading(false);
+            });
           navigation.replace("Login");
         });
     } catch (e) {
       console.log(e);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -91,7 +128,7 @@ function Settings({ navigation }) {
                           paddingHorizontal: 10,
                         }}
                       >
-                        Islamabad
+                        {vendor.city}
                       </Text>
                     </View>
                   </View>
@@ -222,6 +259,12 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingTop: "3%",
     paddingBottom: "10%",
+  },
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.secondary,
   },
 });
 

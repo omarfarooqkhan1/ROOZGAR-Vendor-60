@@ -1,7 +1,6 @@
 import React from "react";
 import { Container, Text, Grid, Col, View, Content } from "native-base";
 import { Avatar } from "react-native-elements";
-
 import Icon from "react-native-vector-icons/FontAwesome";
 import {
   TouchableOpacity,
@@ -17,13 +16,58 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 import Colors from "../constants/Colors";
+import baseURL from "../constants/baseURL";
 import { useSelector } from "react-redux";
+import messaging from "@react-native-firebase/messaging";
+import firestore from "@react-native-firebase/firestore";
 
 function Dashboard({ navigation }) {
-  const { firstName, lastName, image } = useSelector(
-    (state) => state.newVendor
-  );
-  const vendorName = firstName + " " + lastName;
+  var vendor = useSelector((state) => state.newVendor);
+  const vendorName = vendor.firstName + " " + vendor.lastName;
+
+  const showNotification = (remoteMessage) => {
+    fetch(`${baseURL}/getClient/${remoteMessage.data.clientId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        return navigation.navigate("AcceptOrder", {
+          clientUserName: data.clientUserName,
+          clientImage: data.clientImage,
+          clientPhone: data.clientPhone,
+          clientToken: remoteMessage.data.clientToken,
+          clientLatitude: remoteMessage.data.Lat,
+          clientLongitude: remoteMessage.data.Long,
+          serviceTitle: remoteMessage.data.serviceTitle,
+          orderId: remoteMessage.data.item,
+        });
+      });
+  };
+
+  React.useEffect(() => {
+    messaging().onNotificationOpenedApp((remoteMessage) => {
+      console.log(remoteMessage.data);
+      showNotification(remoteMessage);
+    });
+    messaging().onMessage((remoteMessage) => {
+      console.log(remoteMessage.data);
+      showNotification(remoteMessage);
+    });
+    messaging().onTokenRefresh(() => {
+      messaging()
+        .getToken()
+        .then((updatedToken) => {
+          console.log("Token was updated!");
+          firestore().collection("vendorLocations").doc(vendor._id).update({
+            vendorToken: updatedToken,
+          });
+        });
+    });
+  }, []);
+
   return (
     <>
       <StatusBar backgroundColor="#00c13e" />
@@ -55,7 +99,7 @@ function Dashboard({ navigation }) {
                             paddingHorizontal: 10,
                           }}
                         >
-                          Islamabad
+                          {vendor.city}
                         </Text>
                       </View>
                     </View>
@@ -85,7 +129,7 @@ function Dashboard({ navigation }) {
               borderColor={Colors.primary}
               rounded
               size={120}
-              source={{ uri: image }}
+              source={{ uri: vendor.image }}
             />
             <View style={styles.bigcard}>
               <TouchableOpacity
